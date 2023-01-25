@@ -41,7 +41,7 @@ The grabbers "Screen grabber" and "Audio grabber" depend on the streaming host's
   * [gdigrab](http://underpop.online.fr/f/ffmpeg/help/gdigrab.htm.gz) (recommended)
 * Linux
   * [kmsgrab](http://underpop.online.fr/f/ffmpeg/help/kmsgrab.htm.gz)
-  * [x11grab]([x11grab - FFmpeg](http://underpop.online.fr/f/ffmpeg/help/x11grab.htm.gz))
+  * [x11grab](http://underpop.online.fr/f/ffmpeg/help/x11grab.htm.gz))
 
 ### Audio grabber
 
