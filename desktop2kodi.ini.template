@@ -1,0 +1,57 @@
+#
+# desktop2kodi.ini.template
+#
+# Create a copy of this file named "desktop2kodi.ini", then edit settings
+# as needed. You must at least edit "audio_input" and "kodi_addr", also
+# "video_input" if your operating system is not Windows.
+#
+# Note: for "audio_input", "video_input", "audio_encoder" and "video_encoder"
+# you can either use predefined ffmpeg sections from ffmpeg.ini or define
+# your own locally in this INI file.
+#
+# Defaults are commented out.
+#
+
+[desktop2kodi]
+
+# audio input's section name, either defined in this INI file or in ffmpeg.ini
+# audio input depends on the streaming host's operating system
+#
+audio_input = 
+
+# video input's section name, either defined in this INI file or in ffmpeg.ini
+# audio input depends on the streaming host's operating system, "gdigrab" is
+# the recommended default for Windows (defined in ffmpeg.ini).
+#
+video_input = gdigrab
+
+# audio encoder's section name, either defined in this INI file or in ffmpeg.ini
+# "aac" is the recommended audio encoder for all platforms (defined in ffmpeg.ini).
+#
+audio_encoder = aac
+
+# video encoder's section name, either defined in this INI file or in ffmpeg.ini
+# "libx265_720p" is a conservative default that should work on all platforms.
+# see ffmpeg.ini for GPU-accelerated video encoders.
+#
+video_encoder = libx265_720p
+
+# kodi's JSON-RPC address [USERNAME:PASSWORD@]HOST[:PORT] (default PORT: 8080)
+#
+kodi_addr = 
+
+# RTP stream's broadcast address
+#
+#rtp_addr = 10.255.255.255:1234
+
+# path to ffmpeg executable file
+#
+#ffmpeg = ffmpeg
+
+# delay in seconds between starting ffmpeg and kodi
+#
+#kodi_delay = 5.0
+
+# path to default ffmpeg configuration elements
+#
+#ffmpeg.ini = ffmpeg.ini
