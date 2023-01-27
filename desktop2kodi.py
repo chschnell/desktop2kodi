@@ -42,7 +42,26 @@ class Config:
         config.read(self.ffmpeg_ini)
         for section_name in config.sections():
             self._parse_ffmpeg_section(section_name, config[section_name])
-        
+
+    def list_ffmpeg(self):
+        platform = 'windows' if sys.platform == 'win32' else sys.platform
+        print('Audio input:')
+        for key, value in self.audio_input_db.items():
+            if value.platform is None or value.platform == platform:
+                print(f'  {key:16s} {value.description}')
+        print('Video input:')
+        for key, value in self.video_input_db.items():
+            if value.platform is None or value.platform == platform:
+                print(f'  {key:16s} {value.description}')
+        print('Audio encoder:')
+        for key, value in self.audio_encoder_db.items():
+            if value.platform is None or value.platform == platform:
+                print(f'  {key:16s} {value.description}')
+        print('Video encoder:')
+        for key, value in self.video_encoder_db.items():
+            if value.platform is None or value.platform == platform:
+                print(f'  {key:16s} {value.description}')
+
     def _parse_main_section(self, section):
         self.ffmpeg = section.get('ffmpeg', 'ffmpeg')
         self.ffmpeg_ini = section.get('ffmpeg_ini', 'ffmpeg.ini')
@@ -106,7 +125,6 @@ class Config:
                 section_name, description, args, platform)
         else:
             raise ValueError(f'unknown ffmpeg section type "{type}"')
-        print(description)
 
 ##
 ## Ffmpeg
@@ -229,9 +247,15 @@ def main():
         help='show verbose output')
     parser.add_argument('-c', '--config', metavar='INI_FILE',
         help='main configuration INI file (default: desktop2kodi.ini)', default='desktop2kodi.ini')
+    parser.add_argument('-l', '--list', action='store_true',
+        help='list compatible ffmpeg grabber and encoder, then exit')
     args = parser.parse_args()
 
     config = Config(args.config)
+    if args.list:
+        config.list_ffmpeg()
+        sys.exit(0)
+
     ffmpeg = FfmpegControl(config, args.verbose)
     kodi = KodiControl(config)
     keyboard = VirtualWin32Keyboard() if ffmpeg.audio_unmutable and sys.platform == 'win32' else Keyboard()
