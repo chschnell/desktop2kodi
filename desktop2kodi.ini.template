@@ -42,7 +42,7 @@ kodi_addr =
 
 # RTP stream's broadcast address
 #
-#rtp_addr = 10.255.255.255:1234
+#rtp_addr = 224.0.0.1:1234
 
 # path to ffmpeg executable file
 #

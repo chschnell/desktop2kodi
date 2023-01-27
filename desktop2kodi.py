@@ -52,7 +52,7 @@ class Config:
         self.video_encoder = section.get('video_encoder', None)
         self.kodi_delay = section.getfloat('kodi_delay', 5.0)
 
-        rtp_addr = section.get('rtp_addr', '10.255.255.255:1234').split(':', 1)
+        rtp_addr = section.get('rtp_addr', '224.0.0.1:1234').split(':', 1)
         if len(rtp_addr) == 2:
             rtp_ip, rtp_port = rtp_addr[0], rtp_addr[1]
         else:
