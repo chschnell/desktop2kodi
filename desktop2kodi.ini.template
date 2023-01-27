@@ -40,7 +40,7 @@ video_encoder = libx265_720p
 #
 kodi_addr = 
 
-# RTP stream's broadcast address
+# RTP stream's multicast address
 #
 #rtp_addr = 224.0.0.1:1234
 
