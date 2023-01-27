@@ -1,5 +1,5 @@
 # desktop2kodi
-Stream your Desktop to Kodi, ideally encoded in H.265 at 1280p and 60fps.
+Stream your Desktop to Kodi, ideally encoded in H.265/HEVC at 1280p and 60fps.
 
 This Python script runs on the streaming host and does three things:
 
@@ -8,6 +8,14 @@ This Python script runs on the streaming host and does three things:
 3. mute the streaming host's desktop speakers while streaming (Windows only)
 
 The script ends when you press `Q`, it will stop both ffmpeg and kodi and will unmute your desktop speakers.
+
+## Installation
+
+You need to install [Python 3](https://www.python.org/downloads/), [ffmpeg](https://ffmpeg.org/download.html), and a clone of this repository. For Windows it is recommended to also install [screen-capture-recorder-to-video-windows-free](https://github.com/rdp/screen-capture-recorder-to-video-windows-free) for an audio capture device.
+
+Create a copy of `desktop2kodi.ini.template` and name it `desktop2kodi.ini`. This INI file mostly revolves around FFmpeg configuration, and it is the only file you need to edit. Edit your copy as needed, most importantly try to employ a GPU-accelerated video encoder.
+
+This software was developed and tested with a GPU from NVIDIA and a Raspberry Pi 4.
 
 ## Fixed ffmpeg pipeline
 
@@ -55,7 +63,7 @@ The grabbers "Screen grabber" and "Audio grabber" depend on the streaming host's
 
 ### Video encoder
 
-Preferred video encoding format is HEVC/H.265, H.264 is considered only as a fallback in case H.265 is too demanding for either the encoding host or the decoding device. Using a GPU-accelerated encoder on the streaming host is most likely a requirement if you aim for 60fps at 1080p. Usually the decoding device has less computing power than the encoding host, start by identifying hardware-accelerated decoders for the device and then see if you find an accelerated encoder for your streaming host that encodes in the device's preferred format.
+Preferred video encoding format is H.265/HEVC, H.264 is considered only as a fallback in case H.265 is too demanding for either the encoding host or the decoding device. Using a GPU-accelerated encoder on the streaming host is most likely a requirement if you aim for 60fps at 1080p. Usually the decoding device has less computing power than the encoding host, start by identifying hardware-accelerated decoders for the device and then see if you find an accelerated encoder for your streaming host that encodes in the device's preferred format.
 
 * GPU-accelerated video encoders (Windows and Linux, recommended)
   * [hevc_nvenc](https://docs.nvidia.com/video-technologies/video-codec-sdk/ffmpeg-with-nvidia-gpu/): NVIDIA GPU-accelerated H.264/H.265 encoder, see [here](https://developer.nvidia.com/video-encode-and-decode-gpu-support-matrix-new) for supported cards
