@@ -33,13 +33,13 @@ class Config:
         self.audio_encoder_db = {}
         self.video_encoder_db = {}
         config = configparser.ConfigParser()
-        config.read(ini_filename)
+        config.read(ini_filename, encoding='utf-8')
         self._parse_main_section(config['desktop2kodi'])
         for section_name in config.sections():
             if section_name != 'desktop2kodi':
                 self._parse_ffmpeg_section(section_name, config[section_name])
         config = configparser.ConfigParser()
-        config.read(self.ffmpeg_ini)
+        config.read(self.ffmpeg_ini, encoding='utf-8')
         for section_name in config.sections():
             self._parse_ffmpeg_section(section_name, config[section_name])
 
