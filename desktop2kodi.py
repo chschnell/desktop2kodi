@@ -132,21 +132,24 @@ class Config:
 
 class FfmpegControl:
     def __init__(self, config, verbose):
+        have_video = config.video_input is not None and config.video_encoder is not None
+        have_audio = config.audio_input is not None and config.audio_encoder is not None
         cmdline = [config.ffmpeg]
         cmdline.append('-hide_banner')
         if not verbose:
-            cmdline.append('-loglevel warning')
+            cmdline.extend(['-loglevel', 'warning'])
         self.audio_unmutable = False
-        if config.audio_input is not None:
-            audio_input = config.audio_input_db[config.audio_input]
-            cmdline.append(audio_input.args)
-            self.audio_unmutable = audio_input.unmutable
-        if config.video_input is not None:
+        if have_video:
             cmdline.append(config.video_input_db[config.video_input].args)
-        if config.audio_encoder is not None:
-            cmdline.append(config.audio_encoder_db[config.audio_encoder].args)
-        if config.video_encoder is not None:
+        if have_audio:
+            audio_input = config.audio_input_db[config.audio_input]
+            self.audio_unmutable = audio_input.unmutable
+            cmdline.extend(['-guess_layout_max', '0', audio_input.args])
+        if have_video:
             cmdline.append(config.video_encoder_db[config.video_encoder].args)
+        if have_audio:
+            cmdline.append(config.audio_encoder_db[config.audio_encoder].args)
+            cmdline.append('-ac 2')
         cmdline.extend(['-f', 'rtp_mpegts', config.rtp_url])
         self.cmdline = ' '.join(cmdline)
         self._ffmpeg = None
