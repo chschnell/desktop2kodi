@@ -69,7 +69,7 @@ class Config:
         self.video_input = section.get('video_input', None)
         self.audio_encoder = section.get('audio_encoder', None)
         self.video_encoder = section.get('video_encoder', None)
-        self.kodi_delay = section.getfloat('kodi_delay', 5.0)
+        self.kodi_delay = section.getfloat('kodi_delay', 0)
 
         rtp_addr = section.get('rtp_addr', '224.0.0.1:1234').split(':', 1)
         if len(rtp_addr) == 2:
@@ -263,15 +263,15 @@ def main():
     kodi.player_stop()
     keyboard.toggle_mute()
     try:
-        print('Waiting for ffmpeg to setup stream...')
         kodi.show_notification('desktop2kodi', f'Connecting {config.rtp_url}')
 
         ffmpeg.start()
-        try:
-            ffmpeg.wait(config.kodi_delay)
-            return
-        except subprocess.TimeoutExpired:
-            pass
+        if config.kodi_delay > 0:
+            try:
+                ffmpeg.wait(config.kodi_delay)
+                return
+            except subprocess.TimeoutExpired:
+                pass
 
         kodi.player_open()
         try:

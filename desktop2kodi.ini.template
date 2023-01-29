@@ -50,7 +50,7 @@ kodi_addr =
 
 # delay in seconds between starting ffmpeg and kodi
 #
-#kodi_delay = 5.0
+#kodi_delay = 0
 
 # path to default ffmpeg configuration elements
 #
