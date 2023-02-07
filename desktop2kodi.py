@@ -144,14 +144,17 @@ class FfmpegControl:
         if have_audio:
             audio_input = config.audio_input_db[config.audio_input]
             self.audio_unmutable = audio_input.unmutable
-            cmdline.extend(['-guess_layout_max', '0', audio_input.args])
+            cmdline.extend(['-guess_layout_max', '0'])
+            cmdline.append(audio_input.args)
         if have_video:
             cmdline.append(config.video_encoder_db[config.video_encoder].args)
         if have_audio:
             cmdline.append(config.audio_encoder_db[config.audio_encoder].args)
-            cmdline.append('-ac 2')
+            cmdline.extend(['-ac', '2'])
         cmdline.extend(['-f', 'rtp_mpegts', config.rtp_url])
         self.cmdline = ' '.join(cmdline)
+        if verbose:
+            print(self.cmdline)
         self._ffmpeg = None
 
     def start(self):
@@ -267,7 +270,7 @@ def main():
     keyboard.toggle_mute()
     try:
         kodi.show_notification('desktop2kodi', f'Connecting {config.rtp_url}')
-
+        print('Streaming, press "Q" to quit.')
         ffmpeg.start()
         if config.kodi_delay > 0:
             try:
@@ -275,15 +278,11 @@ def main():
                 return
             except subprocess.TimeoutExpired:
                 pass
-
         kodi.player_open()
         try:
-            print('Streaming, press "Q" to quit.')
             ffmpeg.wait()
         finally:
             kodi.player_stop()
-    except KeyboardInterrupt:
-        print('\nAborted by CTRL+C')
     finally:
         keyboard.toggle_mute()
 
