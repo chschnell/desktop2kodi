@@ -20,10 +20,10 @@
 audio_input = 
 
 # video input's section name, either defined in this INI file or in ffmpeg.ini
-# video input depends on the streaming host's operating system, "ddagrab" or
-# "ddagrab_60fps" are the recommended default for Windows (defined in ffmpeg.ini).
+# use "gdigrab" or "gdigrab_60fps" with CPU-encoders ("libx264"), and
+# "ddagrab" or "ddagrab_60fps" with GPU-encoders (defined in ffmpeg.ini).
 #
-video_input = ddagrab
+video_input = gdigrab
 
 # audio encoder's section name, either defined in this INI file or in ffmpeg.ini
 # "aac" is the recommended audio encoder for all platforms (defined in ffmpeg.ini).
