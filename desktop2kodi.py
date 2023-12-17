@@ -253,12 +253,12 @@ class KodiControl:
                         'playerid' not in active_player:
                     print('error: unexpected response item to Player.GetActivePlayers():', active_player)
                     continue
+                player_id = active_player['playerid']
                 if not stop_all:
                     # skip players with mismatching medium
                     if active_player['playertype'] != 'internal' or active_player['type'] != 'video':
                         continue
                     # call Player.GetItem() to get currently playing file/stream name
-                    player_id = active_player['playerid']
                     kodi_response = self._exchange_request_response('Player.GetItem',
                         {'playerid': player_id, 'properties': ['file']}, check_result=False)
                     # check Player.GetItem() response syntax
