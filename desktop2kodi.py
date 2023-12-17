@@ -75,17 +75,17 @@ class Config:
 
     def _parse_main_section(self, section):
         local_ip_addr = get_local_ip_addr()
-        self.ffmpeg = section.get('ffmpeg', 'ffmpeg')
-        self.ffmpeg_ini = section.get('ffmpeg_ini', 'ffmpeg.ini')
-        self.nginx = section.get('nginx', 'nginx/nginx.exe')
-        self.nginx_conf = section.get('nginx_conf', 'conf/nginx.conf')
-        self.rtmp_path = section.get('rtmp_path', f'live/desktop-{local_ip_addr}')
-        self.rtmp_source_url = f'rtmp://{section.get("rtmp_source_addr", "127.0.0.1")}/{self.rtmp_path}'
-        self.rtmp_sink_url = f'rtmp://{section.get("rtmp_sink_addr", local_ip_addr)}/{self.rtmp_path}'
         self.audio_input = section.get('audio_input', None)
         self.video_input = section.get('video_input', None)
         self.audio_encoder = section.get('audio_encoder', None)
         self.video_encoder = section.get('video_encoder', None)
+        self.ffmpeg = section.get('ffmpeg', 'ffmpeg')
+        self.ffmpeg_ini = section.get('ffmpeg_ini', 'ffmpeg.ini')
+        self.nginx = section.get('nginx', 'nginx/nginx')
+        self.nginx_conf = section.get('nginx_conf', 'conf/nginx.conf')
+        self.rtmp_path = section.get('rtmp_path', f'live/desktop-{local_ip_addr}')
+        self.rtmp_source_url = f'rtmp://{section.get("rtmp_source_addr", "127.0.0.1")}/{self.rtmp_path}'
+        self.rtmp_sink_url = f'rtmp://{section.get("rtmp_sink_addr", local_ip_addr)}/{self.rtmp_path}'
         self.kodi_delay = section.getfloat('kodi_delay', 0)
 
         kodi_username, kodi_password = None, None
