@@ -20,10 +20,10 @@
 audio_input = 
 
 # video input's section name, either defined in this INI file or in ffmpeg.ini
-# audio input depends on the streaming host's operating system, "gdigrab" is
-# the recommended default for Windows (defined in ffmpeg.ini).
+# video input depends on the streaming host's operating system, "ddagrab" or
+# "ddagrab_60fps" are the recommended default for Windows (defined in ffmpeg.ini).
 #
-video_input = gdigrab
+video_input = ddagrab
 
 # audio encoder's section name, either defined in this INI file or in ffmpeg.ini
 # "aac" is the recommended audio encoder for all platforms (defined in ffmpeg.ini).
@@ -31,27 +31,43 @@ video_input = gdigrab
 audio_encoder = aac
 
 # video encoder's section name, either defined in this INI file or in ffmpeg.ini
-# "libx265_720p" is a conservative default that should work on all platforms.
+# "libx264" is a conservative default that should work on all platforms.
 # see ffmpeg.ini for GPU-accelerated video encoders.
 #
-video_encoder = libx265_720p
+video_encoder = libx264
 
 # kodi's JSON-RPC address [USERNAME:PASSWORD@]HOST[:PORT] (default PORT: 8080)
 #
 kodi_addr = 
 
-# RTP stream's multicast address
-#
-#rtp_addr = 224.0.0.1:1234
-
 # path to ffmpeg executable file
 #
 #ffmpeg = ffmpeg
 
+# path to default ffmpeg configuration elements
+#
+#ffmpeg_ini = ffmpeg.ini
+
+# path to nginx executable file
+#
+#nginx = nginx/nginx
+
+# path to nginx configuration file (relative to ./nginx/)
+#
+#nginx_conf = conf/nginx.conf
+
+# Target RTMP server address of the stream source (PC)
+#
+#rtmp_source_addr = 127.0.0.1
+
+# Target RTMP server address of the stream sink (kodi), <LOCAL_IP> is the PC's default IP for outbound traffic
+#
+#rtmp_sink_addr = <LOCAL_IP>
+
+# RTMP URL path (after "rtmp://server[:port]/..."), <LOCAL_IP> is the PC's default IP for outbound traffic
+#
+#rtmp_path = live/desktop-<LOCAL_IP>
+
 # delay in seconds between starting ffmpeg and kodi
 #
 #kodi_delay = 0
-
-# path to default ffmpeg configuration elements
-#
-#ffmpeg.ini = ffmpeg.ini
