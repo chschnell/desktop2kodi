@@ -1,6 +1,6 @@
 # Building NGINX with nginx-rtmp-module for Win32
 
-Based on [http://nginx.org/en/docs/howto_build_on_win32.html](Building nginx on the Win32 platform with Visual C).
+Based on [Building nginx on the Win32 platform with Visual C](http://nginx.org/en/docs/howto_build_on_win32.html).
 
 ## Prerequisites
 
