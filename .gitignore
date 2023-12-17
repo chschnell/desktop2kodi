@@ -129,3 +129,4 @@ dmypy.json
 .pyre/
 
 desktop2kodi.ini
+nginx/build/

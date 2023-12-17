@@ -1,0 +1,25 @@
+diff --git a/dash/ngx_rtmp_dash_module.c b/dash/ngx_rtmp_dash_module.c
+index 21bc73c..f4179ad 100644
+--- a/dash/ngx_rtmp_dash_module.c
++++ b/dash/ngx_rtmp_dash_module.c
+@@ -1665,7 +1665,7 @@ ngx_rtmp_dash_create_app_conf(ngx_conf_t *cf)
+     conf->playlen = NGX_CONF_UNSET_MSEC;
+     conf->cleanup = NGX_CONF_UNSET;
+     conf->nested = NGX_CONF_UNSET;
+-    conf->clock_compensation = NGX_CONF_UNSET;
++    conf->clock_compensation = (ngx_uint_t)NGX_CONF_UNSET;
+ 
+     return conf;
+ }
+diff --git a/hls/ngx_rtmp_mpegts_crc.c b/hls/ngx_rtmp_mpegts_crc.c
+index 437d605..fc7372e 100644
+--- a/hls/ngx_rtmp_mpegts_crc.c
++++ b/hls/ngx_rtmp_mpegts_crc.c
+@@ -13,6 +13,7 @@
+  *    ReflectOut    = False
+  *    Algorithm     = table-driven
+  *****************************************************************************/
++#include "ngx_config.h"
+ #include "ngx_rtmp_mpegts_crc.h"     /* include the header file generated with pycrc */
+ #include <stdlib.h>
+ #include <stdint.h>

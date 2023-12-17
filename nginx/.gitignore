@@ -1,0 +1,5 @@
+build/
+logs/
+modules/
+temp/
+nginx.exe

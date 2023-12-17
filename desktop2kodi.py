@@ -8,11 +8,22 @@
 ##   Set "media.hardwaremediakeys.enabled" to "False"
 ##
 
-import sys, argparse, time, json, base64, subprocess, urllib.request, ctypes, configparser
+import sys, os, argparse, time, json, base64, subprocess, urllib.request, ctypes, configparser, socket
 
 ##
 ## Config
 ##
+
+def get_local_ip():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.settimeout(0)
+    try:
+        # doesn't need to be reachable
+        s.connect(('10.254.254.254', 1))
+        IP = s.getsockname()[0]
+    finally:
+        s.close()
+    return IP
 
 class Config:
     class FfmpegPipelineSegment:
@@ -65,18 +76,15 @@ class Config:
     def _parse_main_section(self, section):
         self.ffmpeg = section.get('ffmpeg', 'ffmpeg')
         self.ffmpeg_ini = section.get('ffmpeg_ini', 'ffmpeg.ini')
+        self.nginx = section.get('nginx', 'nginx/nginx.exe')
+        self.nginx_conf = section.get('nginx_conf', 'conf/nginx.conf')
+        self.rtmp_source_url = section.get('rtmp_source_url', f'rtmp://127.0.0.1/live/desktop')
+        self.rtmp_sink_url = section.get('rtmp_sink_url', f'rtmp://{get_local_ip()}/live/desktop')
         self.audio_input = section.get('audio_input', None)
         self.video_input = section.get('video_input', None)
         self.audio_encoder = section.get('audio_encoder', None)
         self.video_encoder = section.get('video_encoder', None)
         self.kodi_delay = section.getfloat('kodi_delay', 0)
-
-        rtp_addr = section.get('rtp_addr', '224.0.0.1:1234').split(':', 1)
-        if len(rtp_addr) == 2:
-            rtp_ip, rtp_port = rtp_addr[0], rtp_addr[1]
-        else:
-            rtp_ip, rtp_port = rtp_addr[0], 1234
-        self.rtp_url = f'rtp://{rtp_ip}:{rtp_port}/'
 
         kodi_username, kodi_password = None, None
         kodi_addr = section['kodi_addr'].split('@', 1)
@@ -127,6 +135,29 @@ class Config:
             raise ValueError(f'unknown ffmpeg section type "{type}"')
 
 ##
+## NGINX/RTMP
+##
+
+class NginxRtmpControl:
+    def __init__(self, config):
+        self.cmdline_start = [config.nginx, '-c', config.nginx_conf]
+        self.cmdline_stop = [config.nginx, '-c', config.nginx_conf, '-s', 'stop']
+        self._nginx = None
+
+    def start_rtmp_server(self):
+        if self._nginx is None:
+            os.makedirs('nginx/logs', exist_ok=True) 
+            os.makedirs('nginx/modules', exist_ok=True) 
+            os.makedirs('nginx/temp', exist_ok=True) 
+            self._nginx = subprocess.Popen(self.cmdline_start)
+
+    def stop_rtmp_server(self):
+        if self._nginx is not None:
+            subprocess.Popen(self.cmdline_stop).wait()
+            self._nginx.wait()
+            self._nginx = None
+
+##
 ## Ffmpeg
 ##
 
@@ -151,11 +182,14 @@ class FfmpegControl:
         if have_audio:
             cmdline.append(config.audio_encoder_db[config.audio_encoder].args)
             cmdline.extend(['-ac', '2'])
-        cmdline.extend(['-f', 'rtp_mpegts', config.rtp_url])
+        cmdline.extend(['-f', 'flv', '-flvflags', 'no_duration_filesize', config.rtmp_source_url])
         self.cmdline = ' '.join(cmdline)
         if verbose:
             print(self.cmdline)
         self._ffmpeg = None
+
+    def is_audio_unmutable(self):
+        return self.audio_unmutable and sys.platform == 'win32'
 
     def start(self):
         self._ffmpeg = subprocess.Popen(self.cmdline)
@@ -173,7 +207,7 @@ class KodiControl:
 
     def __init__(self, config):
         self.config = config
-        self.id = 0
+        self.request_id = 0
         self.kodi_url = f'http://{config.kodi_ip}:{config.kodi_port}/jsonrpc'
         if config.kodi_username is None:
             self.credentials = None
@@ -181,21 +215,34 @@ class KodiControl:
             self.credentials = base64.b64encode(
                 f'{config.kodi_username}:{config.kodi_password}'.encode()).decode()
 
-    def player_stop(self, playerid=0, check_result=False):
-        return self._exchange_request_response('Player.Stop',
-            {'playerid': playerid}, check_result=check_result)
+    def player_stop(self):
+        # Player.GetActivePlayers:
+        #    {'id': '1', 'jsonrpc': '2.0', 'result': []}
+        #    {'id': '5', 'jsonrpc': '2.0', 'result': [{'playerid': 1, 'playertype': 'internal', 'type': 'video'}]}
+        active_players = self._exchange_request_response('Player.GetActivePlayers', check_result=False)
+        if 'result' not in active_players:
+            print('unexpected response to Player.GetActivePlayers:', active_players)
+            return
+        for active_player in active_players['result']:
+            if 'playerid' in active_player:
+                player_stop = self._exchange_request_response('Player.Stop',
+                    {'playerid': active_player['playerid']}, check_result=False)
+                if 'result' not in player_stop or player_stop['result'] != 'OK':
+                    print('unexpected response to Player.Stop:', player_stop)
+            else:
+                print('error: missing playerid in Player.GetActivePlayers item:', active_player)
 
     def player_open(self):
         return self._exchange_request_response('Player.Open',
-            {'item': {'file': self.config.rtp_url}})
+            {'item': {'file': self.config.rtmp_sink_url}})
 
     def show_notification(self, title, message, displaytime_ms=5000):
         return self._exchange_request_response('GUI.ShowNotification',
             {'title': title, 'message': message, 'displaytime': displaytime_ms})
 
-    def _exchange_request_response(self, method, params, check_result=True):
-        self.id += 1
-        kodi_request = {'jsonrpc': '2.0', 'id': str(self.id), 'method': method, 'params': params}
+    def _exchange_request_response(self, method, params={}, check_result=True):
+        self.request_id += 1
+        kodi_request = {'jsonrpc': '2.0', 'id': str(self.request_id), 'method': method, 'params': params}
         http_request = urllib.request.Request(self.kodi_url, method='POST')
         http_request.add_header('Content-Type', 'application/json')
         if self.credentials is not None:
@@ -262,16 +309,18 @@ def main():
         config.list_ffmpeg()
         sys.exit(0)
 
+    nginx = NginxRtmpControl(config)
     ffmpeg = FfmpegControl(config, args.verbose)
     kodi = KodiControl(config)
-    keyboard = VirtualWin32Keyboard() if ffmpeg.audio_unmutable and sys.platform == 'win32' else Keyboard()
+    keyboard = VirtualWin32Keyboard() if ffmpeg.is_audio_unmutable() else Keyboard()
 
     kodi.player_stop()
     keyboard.toggle_mute()
     try:
-        kodi.show_notification('desktop2kodi', f'Connecting {config.rtp_url}')
-        print('Streaming, press "Q" to quit.')
+        kodi.show_notification('desktop2kodi', f'Connecting {config.rtmp_sink_url}')
+        nginx.start_rtmp_server()
         ffmpeg.start()
+        print('Streaming, press "Q" to quit.')
         if config.kodi_delay > 0:
             try:
                 ffmpeg.wait(config.kodi_delay)
@@ -284,6 +333,7 @@ def main():
         finally:
             kodi.player_stop()
     finally:
+        nginx.stop_rtmp_server()
         keyboard.toggle_mute()
 
 if __name__ == '__main__':
