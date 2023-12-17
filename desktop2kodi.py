@@ -8,22 +8,11 @@
 ##   Set "media.hardwaremediakeys.enabled" to "False"
 ##
 
-import sys, os, argparse, time, json, base64, subprocess, urllib.request, ctypes, configparser, socket
+import sys, os, argparse, time, json, base64, subprocess, urllib.request, ctypes, configparser, socket, pathlib
 
 ##
 ## Config
 ##
-
-def get_local_ip_addr():
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.settimeout(0)
-    try:
-        # doesn't need to be reachable
-        s.connect(('10.254.254.254', 1))
-        IP = s.getsockname()[0]
-    finally:
-        s.close()
-    return IP
 
 class Config:
     class FfmpegPipelineSegment:
@@ -38,7 +27,10 @@ class Config:
             super().__init__(id, description, args, platform)
             self.unmutable = unmutable
 
-    def __init__(self, ini_filename):
+    def __init__(self, ini_filename, verbose):
+        self.verbose = verbose
+        self.local_ip_addr = self._get_local_ip_addr()
+        self.nginx_bin = self._find_nginx_bin()
         self.audio_input_db = {}
         self.video_input_db = {}
         self.audio_encoder_db = {}
@@ -73,19 +65,44 @@ class Config:
             if value.platform is None or value.platform == platform:
                 print(f'  {key:16s} {value.description}')
 
+    def _get_local_ip_addr(self):
+        ip_addr = None
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.settimeout(0)
+        try:
+            s.connect(('10.254.254.254', 1)) # addr doesn't need to be reachable
+            ip_addr = s.getsockname()[0]
+        finally:
+            s.close()
+        if ip_addr is None:
+            raise RuntimeError('error: unable to determine local ip address!')
+        elif self.verbose:
+            print('local ip address:', ip_addr)
+        return ip_addr
+
+    def _find_nginx_bin(self):
+        nginx_bin = None
+        for file_candidate in pathlib.Path('nginx/build').glob('nginx-*.*.*/objs/nginx.exe'):
+            if nginx_bin is None or file_candidate > nginx_bin:
+                nginx_bin = file_candidate
+        if nginx_bin is None:
+            raise RuntimeError('error: nginx binary not found!')
+        elif self.verbose:
+            print('found nginx binary:', nginx_bin)
+        return nginx_bin
+
     def _parse_main_section(self, section):
-        local_ip_addr = get_local_ip_addr()
         self.audio_input = section.get('audio_input', None)
         self.video_input = section.get('video_input', None)
         self.audio_encoder = section.get('audio_encoder', None)
         self.video_encoder = section.get('video_encoder', None)
         self.ffmpeg = section.get('ffmpeg', 'ffmpeg')
         self.ffmpeg_ini = section.get('ffmpeg_ini', 'ffmpeg.ini')
-        self.nginx = section.get('nginx', 'nginx/nginx')
+        self.nginx = section.get('nginx', self.nginx_bin)
         self.nginx_conf = section.get('nginx_conf', 'conf/nginx.conf')
-        self.rtmp_path = section.get('rtmp_path', f'live/desktop-{local_ip_addr}')
+        self.rtmp_path = section.get('rtmp_path', f'live/desktop-{self.local_ip_addr}')
         self.rtmp_source_url = f'rtmp://{section.get("rtmp_source_addr", "127.0.0.1")}/{self.rtmp_path}'
-        self.rtmp_sink_url = f'rtmp://{section.get("rtmp_sink_addr", local_ip_addr)}/{self.rtmp_path}'
+        self.rtmp_sink_url = f'rtmp://{section.get("rtmp_sink_addr", self.local_ip_addr)}/{self.rtmp_path}'
         self.kodi_delay = section.getfloat('kodi_delay', 0)
 
         kodi_username, kodi_password = None, None
@@ -146,14 +163,14 @@ class NginxRtmpControl:
         self.cmdline_stop = [config.nginx, '-c', config.nginx_conf, '-s', 'stop']
         self._nginx = None
 
-    def start_rtmp_server(self):
+    def start(self):
         if self._nginx is None:
             os.makedirs('nginx/logs', exist_ok=True) 
             os.makedirs('nginx/modules', exist_ok=True) 
             os.makedirs('nginx/temp', exist_ok=True) 
             self._nginx = subprocess.Popen(self.cmdline_start)
 
-    def stop_rtmp_server(self):
+    def stop(self):
         if self._nginx is not None:
             subprocess.Popen(self.cmdline_stop).wait()
             self._nginx.wait()
@@ -164,12 +181,12 @@ class NginxRtmpControl:
 ##
 
 class FfmpegControl:
-    def __init__(self, config, verbose):
+    def __init__(self, config):
         have_video = config.video_input is not None and config.video_encoder is not None
         have_audio = config.audio_input is not None and config.audio_encoder is not None
         cmdline = [config.ffmpeg]
         cmdline.append('-hide_banner')
-        if not verbose:
+        if not config.verbose:
             cmdline.extend(['-loglevel', 'warning'])
         self.audio_unmutable = False
         if have_video:
@@ -186,7 +203,7 @@ class FfmpegControl:
             cmdline.extend(['-ac', '2'])
         cmdline.extend(['-f', 'flv', '-flvflags', 'no_duration_filesize', config.rtmp_source_url])
         self.cmdline = ' '.join(cmdline)
-        if verbose:
+        if config.verbose:
             print(self.cmdline)
         self._ffmpeg = None
 
@@ -214,7 +231,15 @@ class KodiControl:
             self.credentials = base64.b64encode(
                 f'{config.kodi_username}:{config.kodi_password}'.encode()).decode()
 
-    def player_stop(self, stop_all=True):
+    def show_notification(self, title, message, displaytime_ms=5000):
+        return self._exchange_request_response('GUI.ShowNotification',
+            {'title': title, 'message': message, 'displaytime': displaytime_ms})
+
+    def start(self):
+        return self._exchange_request_response('Player.Open',
+            {'item': {'file': self.config.rtmp_sink_url}})
+
+    def stop(self, stop_all=True):
         try:
             active_players = self._exchange_request_response('Player.GetActivePlayers',
                 check_result=False)
@@ -257,16 +282,8 @@ class KodiControl:
                 if not stop_all:
                     break
         except KodiControl.KodiError as e:
-            print('warning: error in player_stop()', e)
+            print('warning: error in stop()', e)
             
-    def player_open(self):
-        return self._exchange_request_response('Player.Open',
-            {'item': {'file': self.config.rtmp_sink_url}})
-
-    def show_notification(self, title, message, displaytime_ms=5000):
-        return self._exchange_request_response('GUI.ShowNotification',
-            {'title': title, 'message': message, 'displaytime': displaytime_ms})
-
     def _exchange_request_response(self, method, params={}, check_result=True):
         self.request_id += 1
         kodi_request = {'jsonrpc': '2.0', 'id': str(self.request_id), 'method': method, 'params': params}
@@ -335,21 +352,21 @@ def main():
         help='list compatible ffmpeg grabber and encoder, then exit')
     args = parser.parse_args()
 
-    config = Config(args.config)
+    config = Config(args.config, args.verbose)
     if args.list:
         config.list_ffmpeg()
         sys.exit(0)
 
     nginx = NginxRtmpControl(config)
-    ffmpeg = FfmpegControl(config, args.verbose)
+    ffmpeg = FfmpegControl(config)
     kodi = KodiControl(config)
     keyboard = Keyboard.get_keyboard(ffmpeg.audio_unmutable)
 
-    kodi.player_stop()
+    kodi.stop()
     keyboard.toggle_mute()
     try:
+        nginx.start()
         kodi.show_notification('desktop2kodi', f'Connecting {config.rtmp_sink_url}')
-        nginx.start_rtmp_server()
         ffmpeg.start()
         print('Streaming, press "Q" to quit.')
         if config.kodi_delay > 0:
@@ -358,13 +375,13 @@ def main():
                 return
             except subprocess.TimeoutExpired:
                 pass
-        kodi.player_open()
+        kodi.start()
         try:
             ffmpeg.wait()
         finally:
-            kodi.player_stop(stop_all=False)
+            kodi.stop(stop_all=False)
     finally:
-        nginx.stop_rtmp_server()
+        nginx.stop()
         keyboard.toggle_mute()
 
 if __name__ == '__main__':

@@ -50,7 +50,7 @@ kodi_addr =
 
 # path to nginx executable file
 #
-#nginx = nginx/nginx
+#nginx = nginx/build/nginx-*/objs/nginx.exe
 
 # path to nginx configuration file (relative to ./nginx/)
 #
