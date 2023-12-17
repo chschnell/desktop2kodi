@@ -1,5 +1,7 @@
 # Building NGINX with nginx-rtmp-module for Win32
 
+Instructions to build Win32 [NGINX](http://nginx.org/en/download.html) with [nginx-rtmp-module](https://github.com/sergey-dryabzhinsky/nginx-rtmp-module) for desktop2kodi.
+
 Based on [Building nginx on the Win32 platform with Visual C](http://nginx.org/en/docs/howto_build_on_win32.html).
 
 ## Prerequisites
@@ -7,22 +9,22 @@ Based on [Building nginx on the Win32 platform with Visual C](http://nginx.org/e
 Download and install:
 
 - [MSYS2](https://www.msys2.org/)
-- [Visual Studio Community Edition](https://visualstudio.microsoft.com/de/vs/community/) (tested version: 2022)
-- [Strawberry Perl](https://strawberryperl.com/)
+- [Visual Studio Community Edition](https://visualstudio.microsoft.com/de/vs/community/) (tested with 2022)
+- [Strawberry Perl for Windows](https://strawberryperl.com/)
 
 ### Installation directories
 
-You might need to adjust these installation paths in instructions below:
+You will likely need to adjust these installation paths in some of the build instructions below:
 
-- desktop2kodi: `D:\projects\desktop2kodi`
-- MSYS2: `D:\msys64`
-- MS Visual Studio: `D:\Program Files\Microsoft Visual Studio\2022\Community`
+- this repository **desktop2kodi:** `D:\Projects\desktop2kodi`
+- build environment **MSYS2:** `D:\msys64`
+- build environment **MS Visual Studio:** `D:\Program Files\Microsoft Visual Studio\2022\Community`
 
 ## Download and unpack sources
 
 ```shell
 # change working directory to desktop2kodi installation directory
-cd "D:\projects\desktop2kodi"
+cd "D:\Projects\desktop2kodi"
 
 mkdir -p nginx/build
 cd nginx/build
@@ -66,27 +68,25 @@ In order to build NGINX under Windows we need a MSYS2 bash session with Microsof
 # start PowerShell session
 powershell.exe
 
-# add MSVC toolchain to environment
+# start nested shell session with MSVC toolchain in environment
 Start-Process -FilePath "D:\Program Files\Microsoft Visual Studio\2022\Community\Common7\Tools\LaunchDevCmd.bat" -Wait -NoNewWindow
 
 # append minimum MSYS2 path to PATH environment variable
 set PATH=%PATH%;D:\msys64\usr\bin
 
 # change working directory to nginx source directory
-cd /D "D:\projects\desktop2kodi\nginx\build\nginx-1.25.3"
+cd /D "D:\Projects\desktop2kodi\nginx\build\nginx-1.25.3"
 
-# start MSYS2 bash session
+# start nested MSYS2 bash session
 bash
 
 # cleanup (optional)
 nmake clean
-rm ../../nginx.exe
 
 # configure
 ./configure \
     --with-cc=cl \
     --with-cc-opt=-DFD_SETSIZE=1024 \
-    --with-debug \
     --prefix=nginx \
     --conf-path=conf/nginx.conf \
     --pid-path=logs/nginx.pid \
@@ -107,7 +107,4 @@ rm ../../nginx.exe
 
 # build
 nmake
-
-# install
-cp objs/nginx.exe ../..
 ```
