@@ -14,7 +14,7 @@ import sys, os, argparse, time, json, base64, subprocess, urllib.request, ctypes
 ## Config
 ##
 
-def get_local_ip():
+def get_local_ip_addr():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.settimeout(0)
     try:
@@ -74,12 +74,14 @@ class Config:
                 print(f'  {key:16s} {value.description}')
 
     def _parse_main_section(self, section):
+        local_ip_addr = get_local_ip_addr()
         self.ffmpeg = section.get('ffmpeg', 'ffmpeg')
         self.ffmpeg_ini = section.get('ffmpeg_ini', 'ffmpeg.ini')
         self.nginx = section.get('nginx', 'nginx/nginx.exe')
         self.nginx_conf = section.get('nginx_conf', 'conf/nginx.conf')
-        self.rtmp_source_url = section.get('rtmp_source_url', f'rtmp://127.0.0.1/live/desktop')
-        self.rtmp_sink_url = section.get('rtmp_sink_url', f'rtmp://{get_local_ip()}/live/desktop')
+        self.rtmp_path = section.get('rtmp_path', f'live/desktop-{local_ip_addr}')
+        self.rtmp_source_url = f'rtmp://{section.get("rtmp_source_addr", "127.0.0.1")}/{self.rtmp_path}'
+        self.rtmp_sink_url = f'rtmp://{section.get("rtmp_sink_addr", local_ip_addr)}/{self.rtmp_path}'
         self.audio_input = section.get('audio_input', None)
         self.video_input = section.get('video_input', None)
         self.audio_encoder = section.get('audio_encoder', None)
@@ -188,9 +190,6 @@ class FfmpegControl:
             print(self.cmdline)
         self._ffmpeg = None
 
-    def is_audio_unmutable(self):
-        return self.audio_unmutable and sys.platform == 'win32'
-
     def start(self):
         self._ffmpeg = subprocess.Popen(self.cmdline)
 
@@ -215,23 +214,51 @@ class KodiControl:
             self.credentials = base64.b64encode(
                 f'{config.kodi_username}:{config.kodi_password}'.encode()).decode()
 
-    def player_stop(self):
-        # Player.GetActivePlayers:
-        #    {'id': '1', 'jsonrpc': '2.0', 'result': []}
-        #    {'id': '5', 'jsonrpc': '2.0', 'result': [{'playerid': 1, 'playertype': 'internal', 'type': 'video'}]}
-        active_players = self._exchange_request_response('Player.GetActivePlayers', check_result=False)
-        if 'result' not in active_players:
-            print('unexpected response to Player.GetActivePlayers:', active_players)
-            return
-        for active_player in active_players['result']:
-            if 'playerid' in active_player:
-                player_stop = self._exchange_request_response('Player.Stop',
-                    {'playerid': active_player['playerid']}, check_result=False)
-                if 'result' not in player_stop or player_stop['result'] != 'OK':
-                    print('unexpected response to Player.Stop:', player_stop)
-            else:
-                print('error: missing playerid in Player.GetActivePlayers item:', active_player)
-
+    def player_stop(self, stop_all=True):
+        try:
+            active_players = self._exchange_request_response('Player.GetActivePlayers',
+                check_result=False)
+            if 'result' not in active_players:
+                print('unexpected response to Player.GetActivePlayers():', active_players)
+                return
+            for active_player in active_players['result']:
+                # check Player.GetActivePlayers() response item syntax
+                if 'playertype' not in active_player or \
+                        'type' not in active_player or \
+                        'playerid' not in active_player:
+                    print('error: unexpected response item to Player.GetActivePlayers():', active_player)
+                    continue
+                if not stop_all:
+                    # skip players with mismatching medium
+                    if active_player['playertype'] != 'internal' or active_player['type'] != 'video':
+                        continue
+                    # call Player.GetItem() to get currently playing file/stream name
+                    player_id = active_player['playerid']
+                    kodi_response = self._exchange_request_response('Player.GetItem',
+                        {'playerid': player_id, 'properties': ['file']}, check_result=False)
+                    # check Player.GetItem() response syntax
+                    if 'result' not in kodi_response or \
+                            'item' not in kodi_response['result'] or \
+                            'file' not in kodi_response['result']['item'] or \
+                            'label' not in kodi_response['result']['item']:
+                        print('unexpected response to Player.GetItem():', kodi_response)
+                        continue
+                    # skip players with mismatching URL and label
+                    if kodi_response['result']['item']['file'] != self.config.rtmp_sink_url and \
+                            kodi_response['result']['item']['label'] != self.config.rtmp_path:
+                        continue
+                # call Player.Stop()
+                kodi_response = self._exchange_request_response('Player.Stop',
+                    {'playerid': player_id})
+                # check Player.Stop() response syntax
+                if 'result' not in kodi_response or kodi_response['result'] != 'OK':
+                    print('unexpected response to Player.Stop():', kodi_response)
+                    continue
+                if not stop_all:
+                    break
+        except KodiControl.KodiError as e:
+            print('warning: error in player_stop()', e)
+            
     def player_open(self):
         return self._exchange_request_response('Player.Open',
             {'item': {'file': self.config.rtmp_sink_url}})
@@ -260,6 +287,10 @@ class KodiControl:
 class Keyboard:
     def toggle_mute(self):
         pass
+
+    @staticmethod
+    def get_keyboard(want_keyboard):
+        return VirtualWin32Keyboard() if want_keyboard and sys.platform == 'win32' else Keyboard()
 
 class VirtualWin32Keyboard(Keyboard):
     VK_VOLUME_MUTE = 0xad   ## virtual keycode of the "mute" key
@@ -312,7 +343,7 @@ def main():
     nginx = NginxRtmpControl(config)
     ffmpeg = FfmpegControl(config, args.verbose)
     kodi = KodiControl(config)
-    keyboard = VirtualWin32Keyboard() if ffmpeg.is_audio_unmutable() else Keyboard()
+    keyboard = Keyboard.get_keyboard(ffmpeg.audio_unmutable)
 
     kodi.player_stop()
     keyboard.toggle_mute()
@@ -331,7 +362,7 @@ def main():
         try:
             ffmpeg.wait()
         finally:
-            kodi.player_stop()
+            kodi.player_stop(stop_all=False)
     finally:
         nginx.stop_rtmp_server()
         keyboard.toggle_mute()
