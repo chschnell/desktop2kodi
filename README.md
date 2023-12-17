@@ -1,6 +1,6 @@
 # desktop2kodi
 
-Stream your Windows Desktop to Kodi.
+Stream your Windows desktop to Kodi.
 
     +------------[Windows PC]-----------+
     |  +--------+            +-------+  |           +------+
