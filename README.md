@@ -1,17 +1,32 @@
 # desktop2kodi
-Stream your Desktop to Kodi, ideally encoded in H.265/HEVC at 1280p and 60fps.
 
-This Python script runs on the streaming host and does three things:
+Stream your Windows Desktop to Kodi.
 
-1. launch ffmpeg in the background to start providing the stream to your LAN
-2. employ Kodi's [JSON-RPC](https://kodi.wiki/view/JSON-RPC_API/v12) interface to start playing the stream automatically
-3. mute the streaming host's desktop speakers while streaming (Windows only)
+    +------------[Windows PC]-----------+
+    |  +--------+            +-------+  |           +------+
+    |  | ffmpeg |<--[RTMP]-->| nginx |<-+--[RTMP]-->| kodi |
+    |  +--------+            +-------+  |           +------+
+    |       ^                    ^      |               ^
+    |       |                    |      |               |
+    |  +----+--------------------+---+  |               |
+    |  |       desktop2kodi.py       |--+--[JSON-RPC]---+
+    |  +-----------------------------+  |
+    +-----------------------------------+
 
-The script ends when you press `Q`, it will stop both ffmpeg and kodi and will unmute your desktop speakers.
+This Python script is executed on the streaming Windows host and integrates these functions:
+
+1. launch nginx background process as RTMP server
+2. launch ffmpeg background process to start A/V-grabbing, encoding and streaming to RTMP server
+3. employ Kodi's [JSON-RPC](https://kodi.wiki/view/JSON-RPC_API/v12) interface to start playing from RTMP server
+4. mute the streaming host's desktop speakers while streaming (Windows only)
+
+The script ends when you press `Q`, it will stop nginx, ffmpeg and kodi and will unmute your desktop speakers.
 
 ## Installation
 
-You need to install [Python 3](https://www.python.org/downloads/), [ffmpeg](https://ffmpeg.org/download.html), and a clone of this repository. For Windows it is recommended to also install [screen-capture-recorder-to-video-windows-free](https://github.com/rdp/screen-capture-recorder-to-video-windows-free) for an audio capture device.
+You need to install [Python 3](https://www.python.org/downloads/), [ffmpeg](https://ffmpeg.org/download.html), and a clone of this repository. For Windows it is recommended to also install [screen-capture-recorder-to-video-windows-free](https://github.com/rdp/screen-capture-recorder-to-video-windows-free) for an audio capture device. You will also need to [build nginx](README.nginx.md).
+
+## Configuration
 
 Create a copy of `desktop2kodi.ini.template` and name it `desktop2kodi.ini`. This INI file mostly revolves around FFmpeg configuration, and it is the only file you need to edit. Edit your copy as needed, most importantly try to employ a GPU-accelerated video encoder.
 

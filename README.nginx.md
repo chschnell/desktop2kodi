@@ -2,16 +2,26 @@
 
 ## Prerequisites
 
+Download and install:
+
 - [MSYS2](https://www.msys2.org/)
-
 - [Visual Studio Community Edition](https://visualstudio.microsoft.com/de/vs/community/) (tested version: 2022)
-
 - [Strawberry Perl](https://strawberryperl.com/)
 
-## Download and unpack sources (latest releases as of 2023-12-17)
+### Installation directories
+
+You might need to adjust these installation paths in instructions below:
+
+- desktop2kodi: `D:\projects\desktop2kodi`
+- MSYS2: `D:\msys64`
+- MS Visual Studio: `D:\Program Files\Microsoft Visual Studio\2022\Community`
+
+## Download and unpack sources
 
 ```shell
+# change working directory to desktop2kodi installation directory
 cd "D:\projects\desktop2kodi"
+
 mkdir -p nginx/build
 cd nginx/build
 
@@ -29,7 +39,7 @@ tar xzf openssl-3.2.0.tar.gz
 
 git clone https://github.com/sergey-dryabzhinsky/nginx-rtmp-module.git
 
-# PATCH nginx-rtmp-module for MSYS2:
+# Apply patch "nginx-rtmp-module.patch" for MSYS2:
 #
 # ../nginx-rtmp-module/dash/ngx_rtmp_dash_module.c(1668):
 #    warning C4245: "=": Konvertierung von "int" in "ngx_uint_t", signed/unsigned-Konflikt.
@@ -48,16 +58,22 @@ git apply ../../nginx-rtmp-module.patch
 
 ## Build NGINX with nginx-rtmp-module
 
-```shell
-# open PowerShell, then enter MSVC developer cmd using:
-Start-Process -FilePath "D:\Program Files\Microsoft Visual Studio\2022\Community\Common7\Tools\LaunchDevCmd.bat" -Wait -NoNewWindow
+In order to build NGINX under Windows we need a MSYS2 bash session with Microsoft Visual Studio (`nmake.exe`, `cl.exe`, etc.) and Strawberry Perl (NGINX-compatible `perl.exe`) in its environment.
 
-cd /D "D:\projects\desktop2kodi\nginx\build\nginx-1.25.3"
+```shell
+# start PowerShell session
+powershell.exe
+
+# add MSVC toolchain to environment
+Start-Process -FilePath "D:\Program Files\Microsoft Visual Studio\2022\Community\Common7\Tools\LaunchDevCmd.bat" -Wait -NoNewWindow
 
 # append minimum MSYS2 path to PATH environment variable
 set PATH=%PATH%;D:\msys64\usr\bin
 
-# enter MSYS2 bash
+# change working directory to nginx source directory
+cd /D "D:\projects\desktop2kodi\nginx\build\nginx-1.25.3"
+
+# start MSYS2 bash session
 bash
 
 # cleanup (optional)
@@ -86,30 +102,6 @@ rm ../../nginx.exe
     --with-openssl=../openssl-3.2.0 \
     --with-openssl-opt=no-asm \
     --with-http_ssl_module
-
-# checking for OS
-#  + MSYS_NT-10.0-19045 3.4.9.x86_64 x86_64
-#  + using Microsoft Visual C++ compiler
-#  + cl version: 19.37.32825 für x86
-#
-# Configuration summary
-#   + using PCRE2 library: ../pcre2-10.42
-#   + using OpenSSL library: ../openssl-3.2.0
-#   + using zlib library: ../zlib-1.3
-#
-#   nginx path prefix: "nginx"
-#   nginx binary file: "nginx/nginx.exe"
-#   nginx modules path: "nginx/modules"
-#   nginx configuration prefix: "nginx/conf"
-#   nginx configuration file: "nginx/conf/nginx.conf"
-#   nginx pid file: "nginx/logs/nginx.pid"
-#   nginx error log file: "nginx/logs/error.log"
-#   nginx http access log file: "nginx/logs/access.log"
-#   nginx http client request body temporary files: "nginx/temp/client_body_temp"
-#   nginx http proxy temporary files: "nginx/temp/proxy_temp"
-#   nginx http fastcgi temporary files: "nginx/temp/fastcgi_temp"
-#   nginx http uwsgi temporary files: "nginx/temp/uwsgi_temp"
-#   nginx http scgi temporary files: "nginx/temp/scgi_temp"
 
 # build
 nmake
