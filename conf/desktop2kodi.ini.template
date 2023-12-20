@@ -1,7 +1,8 @@
 #
-# desktop2kodi.ini.template
+# conf/desktop2kodi.ini.template
+# desktop2kodi configuration template file.
 #
-# Create a copy of this file named "desktop2kodi.ini", then edit settings
+# Create a copy of this file named "conf/desktop2kodi.ini", then edit settings
 # as needed. You must at least edit "audio_input" and "kodi_addr", also
 # "video_input" if your operating system is not Windows.
 #
