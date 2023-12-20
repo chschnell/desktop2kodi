@@ -80,14 +80,15 @@ class Config:
         return ip_addr
 
     def _parse_main_section(self, section):
+        install_path = os.path.dirname(os.path.realpath(__file__))
         self.audio_input = section.get('audio_input', None)
         self.video_input = section.get('video_input', None)
         self.audio_encoder = section.get('audio_encoder', None)
         self.video_encoder = section.get('video_encoder', None)
         self.ffmpeg = section.get('ffmpeg', 'ffmpeg')
-        self.ffmpeg_ini = section.get('ffmpeg_ini', 'conf/ffmpeg.ini')
+        self.ffmpeg_ini = section.get('ffmpeg_ini', f'{install_path}/conf/ffmpeg.ini')
         self.srs_dir = section.get('srs_dir', 'C:/Program Files (x86)/SRS')
-        self.srs_conf = section.get('srs_conf', f'{os.path.dirname(os.path.realpath(__file__))}/conf/srs.conf')
+        self.srs_conf = section.get('srs_conf', f'{install_path}/conf/srs.conf')
         self.rtmp_path = section.get('rtmp_path', f'live/desktop-{self.local_ip_addr}')
         self.rtmp_source_url = f'rtmp://{section.get("rtmp_source_addr", "127.0.0.1")}/{self.rtmp_path}'
         self.rtmp_sink_url = f'rtmp://{section.get("rtmp_sink_addr", self.local_ip_addr)}/{self.rtmp_path}'
@@ -330,12 +331,14 @@ class VirtualWin32Keyboard(Keyboard):
 ##
 
 def main():
+    install_path = os.path.dirname(os.path.realpath(__file__))
+
     parser = argparse.ArgumentParser(prog='desktop2kodi',
         description='Stream Windows Desktop to Kodi.')
     parser.add_argument('-v', '--verbose', action='store_true',
         help='show verbose output')
     parser.add_argument('-c', '--config', metavar='INI_FILE',
-        help='main configuration INI file (default: conf/desktop2kodi.ini)', default='conf/desktop2kodi.ini')
+        help='main configuration INI file (default: conf/desktop2kodi.ini)', default=f'{install_path}/conf/desktop2kodi.ini')
     parser.add_argument('-l', '--list', action='store_true',
         help='list compatible ffmpeg grabber and encoder, then exit')
     args = parser.parse_args()
