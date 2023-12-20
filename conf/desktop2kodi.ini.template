@@ -46,7 +46,7 @@ kodi_addr =
 
 # path to default ffmpeg configuration elements
 #
-#ffmpeg_ini = ffmpeg.ini
+#ffmpeg_ini = conf/ffmpeg.ini
 
 # path to SRS installation directory
 #
@@ -54,7 +54,7 @@ kodi_addr =
 
 # path to SRS configuration file (relative to desktop2kodi.py installation directory)
 #
-#srs_conf = srs.conf
+#srs_conf = conf/srs.conf
 
 # Target RTMP server address of the stream source (PC)
 #

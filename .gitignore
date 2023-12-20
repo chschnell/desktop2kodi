@@ -128,5 +128,5 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-desktop2kodi.ini
-nginx/build/
+conf/desktop2kodi.ini
+conf/local/
