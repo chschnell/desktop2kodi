@@ -47,7 +47,7 @@ This project's ffmpeg pipeline has a fixed layout:
     +----+----+     +----+----+
          |               |
     +----V---------------V----+           +-------------+
-    |     MPEGTS/RTP muxer    |----//---->| Kodi device |
+    |      FLV/RTMP muxer     |----//---->| Kodi device |
     +-------------------------+           +-------------+
 
 ## Grabber
