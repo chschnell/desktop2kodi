@@ -48,13 +48,13 @@ kodi_addr =
 #
 #ffmpeg_ini = ffmpeg.ini
 
-# path to nginx executable file
+# path to SRS installation directory
 #
-#nginx = nginx/build/nginx-*/objs/nginx.exe
+#srs_dir = C:/Program Files (x86)/SRS
 
-# path to nginx configuration file (relative to ./nginx/)
+# path to SRS configuration file (relative to desktop2kodi.py installation directory)
 #
-#nginx_conf = conf/nginx.conf
+#srs_conf = srs.conf
 
 # Target RTMP server address of the stream source (PC)
 #
@@ -68,6 +68,6 @@ kodi_addr =
 #
 #rtmp_path = live/desktop-<LOCAL_IP>
 
-# delay in seconds between starting ffmpeg and kodi
+# delay in seconds (float) between starting ffmpeg and kodi
 #
 #kodi_delay = 0

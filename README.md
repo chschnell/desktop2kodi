@@ -4,7 +4,7 @@ Stream your Windows desktop to Kodi.
 
     +------------[Windows PC]-----------+
     |  +--------+            +-------+  |           +------+
-    |  | ffmpeg |<--[RTMP]-->| nginx |<-+--[RTMP]-->| kodi |
+    |  | ffmpeg |<--[RTMP]-->|  srs  |<-+--[RTMP]-->| kodi |
     |  +--------+            +-------+  |           +------+
     |       ^                    ^      |               ^
     |       |                    |      |               |
@@ -15,16 +15,16 @@ Stream your Windows desktop to Kodi.
 
 This Python script is executed on the streaming Windows host and integrates these functions:
 
-1. launch nginx background process as RTMP server
+1. launch SRS background process as RTMP server
 2. launch ffmpeg background process to start A/V-grabbing, encoding and streaming to RTMP server
 3. employ Kodi's [JSON-RPC](https://kodi.wiki/view/JSON-RPC_API/v12) interface to start playing from RTMP server
 4. mute the streaming host's desktop speakers while streaming (Windows only)
 
-The script ends when you press `Q`, it will stop nginx, ffmpeg and kodi and will unmute your desktop speakers.
+The script ends when you press `Q`, it will stop SRS, ffmpeg and kodi and will unmute your desktop speakers.
 
 ## Installation
 
-You need to install [Python 3](https://www.python.org/downloads/), [ffmpeg](https://ffmpeg.org/download.html), and a clone of this repository. For Windows it is recommended to also install [screen-capture-recorder-to-video-windows-free](https://github.com/rdp/screen-capture-recorder-to-video-windows-free) for an audio capture device. You will also need to [build nginx](README.nginx.md).
+You need to install [Python 3](https://www.python.org/downloads/), [ffmpeg](https://ffmpeg.org/download.html), and a clone of this repository. For Windows it is recommended to also install [screen-capture-recorder-to-video-windows-free](https://github.com/rdp/screen-capture-recorder-to-video-windows-free) for an audio capture device. You will also need to [install SRS](https://github.com/ossrs/srs).
 
 ## Configuration
 

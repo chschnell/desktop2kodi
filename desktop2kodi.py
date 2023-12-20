@@ -30,7 +30,6 @@ class Config:
     def __init__(self, ini_filename, verbose):
         self.verbose = verbose
         self.local_ip_addr = self._get_local_ip_addr()
-        self.nginx_bin = self._find_nginx_bin()
         self.audio_input_db = {}
         self.video_input_db = {}
         self.audio_encoder_db = {}
@@ -80,17 +79,6 @@ class Config:
             print('local ip address:', ip_addr)
         return ip_addr
 
-    def _find_nginx_bin(self):
-        nginx_bin = None
-        for file_candidate in pathlib.Path('nginx/build').glob('nginx-*.*.*/objs/nginx.exe'):
-            if nginx_bin is None or file_candidate > nginx_bin:
-                nginx_bin = file_candidate
-        if nginx_bin is None:
-            raise RuntimeError('error: nginx binary not found!')
-        elif self.verbose:
-            print('found nginx binary:', nginx_bin)
-        return nginx_bin
-
     def _parse_main_section(self, section):
         self.audio_input = section.get('audio_input', None)
         self.video_input = section.get('video_input', None)
@@ -98,8 +86,8 @@ class Config:
         self.video_encoder = section.get('video_encoder', None)
         self.ffmpeg = section.get('ffmpeg', 'ffmpeg')
         self.ffmpeg_ini = section.get('ffmpeg_ini', 'ffmpeg.ini')
-        self.nginx = section.get('nginx', self.nginx_bin)
-        self.nginx_conf = section.get('nginx_conf', 'conf/nginx.conf')
+        self.srs_dir = section.get('srs_dir', 'C:/Program Files (x86)/SRS')
+        self.srs_conf = section.get('srs_conf', f'{os.path.dirname(os.path.realpath(__file__))}/srs.conf')
         self.rtmp_path = section.get('rtmp_path', f'live/desktop-{self.local_ip_addr}')
         self.rtmp_source_url = f'rtmp://{section.get("rtmp_source_addr", "127.0.0.1")}/{self.rtmp_path}'
         self.rtmp_sink_url = f'rtmp://{section.get("rtmp_sink_addr", self.local_ip_addr)}/{self.rtmp_path}'
@@ -154,25 +142,24 @@ class Config:
             raise ValueError(f'unknown ffmpeg section type "{type}"')
 
 ##
-## NGINX/RTMP
+## RTMP Server
 ##
 
-class NginxRtmpControl:
+class RtmpControl:
     def __init__(self, config):
-        self.cmdline_start = [config.nginx, '-c', config.nginx_conf]
-        self.cmdline_stop = [config.nginx, '-c', config.nginx_conf, '-s', 'stop']
+        self.config = config
         self._nginx = None
 
     def start(self):
         if self._nginx is None:
-            os.makedirs('nginx/logs', exist_ok=True) 
-            os.makedirs('nginx/modules', exist_ok=True) 
-            os.makedirs('nginx/temp', exist_ok=True) 
-            self._nginx = subprocess.Popen(self.cmdline_start)
+            self._nginx = subprocess.Popen(
+                [f'{self.config.srs_dir}/objs/srs.exe', '-c', self.config.srs_conf],
+                stdin = subprocess.DEVNULL,
+                cwd = self.config.srs_dir)
 
     def stop(self):
         if self._nginx is not None:
-            subprocess.Popen(self.cmdline_stop).wait()
+            self._nginx.terminate()
             self._nginx.wait()
             self._nginx = None
 
@@ -184,8 +171,7 @@ class FfmpegControl:
     def __init__(self, config):
         have_video = config.video_input is not None and config.video_encoder is not None
         have_audio = config.audio_input is not None and config.audio_encoder is not None
-        cmdline = [config.ffmpeg]
-        cmdline.append('-hide_banner')
+        cmdline = [config.ffmpeg, '-hide_banner']
         if not config.verbose:
             cmdline.extend(['-loglevel', 'warning'])
         self.audio_unmutable = False
@@ -257,6 +243,7 @@ class KodiControl:
                 if not stop_all:
                     # skip players with mismatching medium
                     if active_player['playertype'] != 'internal' or active_player['type'] != 'video':
+                        print(f'ignoring player with playertype={active_player["playertype"]}, type={active_player["type"]}')
                         continue
                     # call Player.GetItem() to get currently playing file/stream name
                     kodi_response = self._exchange_request_response('Player.GetItem',
@@ -271,6 +258,7 @@ class KodiControl:
                     # skip players with mismatching URL and label
                     if kodi_response['result']['item']['file'] != self.config.rtmp_sink_url and \
                             kodi_response['result']['item']['label'] != self.config.rtmp_path:
+                        print(f"ignoring player with file={kodi_response['result']['item']['file']}, label={kodi_response['result']['item']['label']}")
                         continue
                 # call Player.Stop()
                 kodi_response = self._exchange_request_response('Player.Stop',
@@ -357,7 +345,7 @@ def main():
         config.list_ffmpeg()
         sys.exit(0)
 
-    nginx = NginxRtmpControl(config)
+    nginx = RtmpControl(config)
     ffmpeg = FfmpegControl(config)
     kodi = KodiControl(config)
     keyboard = Keyboard.get_keyboard(ffmpeg.audio_unmutable)
